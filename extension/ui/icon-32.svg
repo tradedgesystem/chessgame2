@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" role="img" aria-label="Chess pawn icon">
+  <defs>
+    <linearGradient id="pawnGradient" x1="0" x2="0" y1="0" y2="1">
+      <stop offset="0%" stop-color="#f8f9fa"/>
+      <stop offset="100%" stop-color="#d5d7db"/>
+    </linearGradient>
+    <linearGradient id="baseGradient" x1="0" x2="0" y1="0" y2="1">
+      <stop offset="0%" stop-color="#44454a"/>
+      <stop offset="100%" stop-color="#1f2024"/>
+    </linearGradient>
+  </defs>
+  <rect width="128" height="128" rx="18" fill="#0f1115"/>
+  <circle cx="64" cy="42" r="18" fill="url(#pawnGradient)" stroke="#0b0c0e" stroke-width="4"/>
+  <path d="M42 64h44l-8 20h-28z" fill="url(#pawnGradient)" stroke="#0b0c0e" stroke-width="4" stroke-linejoin="round"/>
+  <rect x="36" y="84" width="56" height="12" rx="4" fill="url(#baseGradient)" stroke="#0b0c0e" stroke-width="4"/>
+  <rect x="30" y="96" width="68" height="14" rx="5" fill="url(#baseGradient)" stroke="#0b0c0e" stroke-width="4"/>
+</svg>
