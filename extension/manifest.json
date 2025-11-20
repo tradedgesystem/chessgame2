@@ -16,5 +16,11 @@
       "run_at": "document_idle"
     }
   ],
+  "web_accessible_resources": [
+    {
+      "resources": ["stockfish-worker.js", "lib/stockfish.js", "engine.js", "lib/chess.js"],
+      "matches": ["<all_urls>"]
+    }
+  ],
   "permissions": []
 }
