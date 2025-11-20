@@ -1,0 +1,20 @@
+{
+  "manifest_version": 3,
+  "name": "Chess Assistant",
+  "description": "Offline-friendly chess helper with on-page hint panel and simple engine suggestions.",
+  "version": "1.0.0",
+  "icons": {
+    "32": "ui/icon-32.svg",
+    "48": "ui/icon-48.svg",
+    "128": "ui/icon-128.svg"
+  },
+  "content_scripts": [
+    {
+      "matches": ["<all_urls>"],
+      "js": ["lib/chess.js", "engine.js", "content.js"],
+      "css": ["styles.css"],
+      "run_at": "document_idle"
+    }
+  ],
+  "permissions": []
+}
