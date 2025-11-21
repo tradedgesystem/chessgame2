@@ -8,6 +8,11 @@ A free, offline-friendly Chrome extension that adds a floating chess assistant t
 - Built-in minimax search (configurable depth) for quick move suggestions.
 - No external dependencies or paid APIs.
 
+### Stockfish worker
+- A bundled Stockfish-compatible worker runs analysis off the main thread using the shipped JS/WASM build under `extension/lib/`.
+- On chess.com pages, the extension automatically streams the current board FEN into the worker after each move and shows the best line/score.
+- For responsive play, keep Stockfish depth near **10** with **~1.2s** (1200 ms) movetime; higher values can stall live games.
+
 ## Install (developer mode)
 1. Open **chrome://extensions** in Chrome and enable **Developer mode**.
 2. Click **Load unpacked** and select the `extension/` folder in this repository.
