@@ -163,3 +163,25 @@
   padding-top: 8px;
   margin-top: 12px;
 }
+
+.ca-board-overlay {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 5;
+}
+
+.ca-toggle-row {
+  align-items: center;
+}
+
+.ca-toggle-label {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  font-size: 13px;
+}
+
+.ca-toggle-label input {
+  accent-color: #5da9ff;
+}
