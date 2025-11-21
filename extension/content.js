@@ -67,6 +67,83 @@
   const depthInput = root.querySelector('.ca-depth');
   const depthValue = root.querySelector('.ca-depth-value');
 
+  let analysisWorker = null;
+  let lastAnalyzedFen = '';
+  let boardObserver = null;
+  let workerRequestId = 0;
+  let fallbackTimer = null;
+
+  const STOCKFISH_DEPTH = 10;
+  const STOCKFISH_MOVETIME = 1200;
+
+  function ensureWorker() {
+    if (analysisWorker) return analysisWorker;
+    const workerUrl = chrome.runtime.getURL('stockfish-worker.js');
+    analysisWorker = new Worker(workerUrl);
+    analysisWorker.onmessage = handleWorkerMessage;
+    analysisWorker.onerror = () => {
+      setStatus('Stockfish worker failed; falling back to built-in search.', 'error');
+    };
+    return analysisWorker;
+  }
+
+  function handleWorkerMessage(event) {
+    const data = event.data || {};
+    if (data.type !== 'analysis') return;
+
+    if (fallbackTimer && data.requestId === workerRequestId) {
+      clearTimeout(fallbackTimer);
+      fallbackTimer = null;
+    }
+
+    if (data.error) {
+      setStatus(data.error, 'error');
+      return;
+    }
+
+    if (!data.move) {
+      setStatus('No legal moves found for this position.', 'error');
+      return;
+    }
+
+    const linePreview = (data.line || []).slice(0, 5).join(' → ');
+    const moveText = data.move;
+    const sourceLabel = data.source === 'stockfish' ? 'Stockfish' : 'Built-in';
+    const scoreText = typeof data.score === 'number' ? `score ${data.score}` : 'score N/A';
+    setStatus(`${sourceLabel}: ${moveText} (${scoreText})${linePreview ? ' | Line: ' + linePreview : ''}`, 'success');
+  }
+
+  function postFenToWorker(fen, depth = STOCKFISH_DEPTH) {
+    ensureWorker();
+    workerRequestId += 1;
+    analysisWorker.postMessage({ type: 'analyze', fen, depth, movetime: STOCKFISH_MOVETIME, requestId: workerRequestId });
+  }
+
+  function startChessComWatcher() {
+    if (boardObserver || (!/\.chess\.com$/.test(location.hostname) && !/\.chess\.com$/.test(location.hostname.replace(/^www\./, '')))) {
+      return;
+    }
+
+    const refreshAnalysis = () => {
+      const candidates = collectFenCandidates();
+      for (const fen of candidates) {
+        if (fen === lastAnalyzedFen) return;
+        const valid = chess.load(fen);
+        if (valid) {
+          lastAnalyzedFen = fen;
+          fenArea.value = fen;
+          postFenToWorker(fen);
+          setStatus('Board updated from chess.com; analyzing...', 'info');
+          return;
+        }
+      }
+    };
+
+    boardObserver = new MutationObserver(() => refreshAnalysis());
+    boardObserver.observe(document.body, { subtree: true, childList: true, attributes: true });
+    refreshAnalysis();
+  }
+
   function updateFen() {
     fenArea.value = chess.fen();
   }
@@ -190,7 +267,23 @@
   function suggestMove() {
     const depth = parseInt(depthInput.value, 10) || 2;
     setStatus('Thinking...', 'info');
-    requestAnimationFrame(() => {
+    if (fallbackTimer) {
+      clearTimeout(fallbackTimer);
+      fallbackTimer = null;
+    }
+    try {
+      postFenToWorker(chess.fen(), Math.min(20, Math.max(depth * 2, STOCKFISH_DEPTH)));
+      fallbackTimer = setTimeout(() => {
+        const result = AssistantEngine.bestMove(chess, depth);
+        if (!result.move) {
+          setStatus('No legal moves available.', 'error');
+          return;
+        }
+        const moveText = AssistantEngine.moveToDisplay(result.move);
+        const linePreview = result.line.slice(1).map((m) => AssistantEngine.moveToDisplay(m)).join(' → ');
+        setStatus(`Suggested: ${moveText} (score ${result.score.toFixed(0)})${linePreview ? ' | Line: ' + linePreview : ''}`, 'success');
+      }, 1500);
+    } catch (err) {
       const result = AssistantEngine.bestMove(chess, depth);
       if (!result.move) {
         setStatus('No legal moves available.', 'error');
@@ -199,7 +292,7 @@
       const moveText = AssistantEngine.moveToDisplay(result.move);
       const linePreview = result.line.slice(1).map((m) => AssistantEngine.moveToDisplay(m)).join(' → ');
       setStatus(`Suggested: ${moveText} (score ${result.score.toFixed(0)})${linePreview ? ' | Line: ' + linePreview : ''}`, 'success');
-    });
+    }
   }
 
   toggleBtn.addEventListener('click', () => {
@@ -223,5 +316,6 @@
     depthValue.textContent = depthInput.value;
   });
 
+  startChessComWatcher();
   updateFen();
 })();
