@@ -131,6 +131,19 @@
   accent-color: #5da9ff;
 }
 
+.ca-auto-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 8px;
+  font-size: 13px;
+  color: #c8d4ec;
+}
+
+.ca-auto-row input {
+  accent-color: #5da9ff;
+}
+
 .ca-status {
   margin-top: 6px;
   font-size: 13px;
