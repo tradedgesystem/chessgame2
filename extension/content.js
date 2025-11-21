@@ -164,6 +164,9 @@
     const selectors = ['[data-fen]', '[fen]', '[data-initialfen]', '[data-puzzle-fen]', '[data-startfen]', '[data-live-fen]', 'chess-board', 'cg-board'];
     const candidates = new Set();
 
+    const liveFen = getChessComLiveFen();
+    if (liveFen) candidates.add(liveFen);
+
     selectors.forEach((sel) => {
       document.querySelectorAll(sel).forEach((el) => {
         attrs.forEach((attr) => {
@@ -187,7 +190,107 @@
       });
     });
 
+    const domFen = deriveFenFromDomBoard();
+    if (domFen) candidates.add(domFen);
+
     return Array.from(candidates);
+  }
+
+  function detectTurnFromDom() {
+    const activeClock = document.querySelector('[data-player-color].clock-playeractive, [data-player-color].clock-player-turn, [data-clock-color].clock-playeractive, [data-clock-color].clock-player-turn');
+    if (activeClock) {
+      const color = (activeClock.getAttribute('data-player-color') || activeClock.getAttribute('data-clock-color') || '').toLowerCase();
+      if (color === 'white') return 'w';
+      if (color === 'black') return 'b';
+    }
+    return 'w';
+  }
+
+  function getChessComLiveFen() {
+    const probes = [
+      () => window.liveGame?.board?.fen?.(),
+      () => window.liveGame?.game?.fen,
+      () => window.GameManager?.game?.fen,
+      () => window.GameManager?.board?.fen?.(),
+      () => window.chessCom?.game?.fen,
+    ];
+
+    for (const probe of probes) {
+      try {
+        const fen = probe();
+        if (fen && typeof fen === 'string') return fen;
+      } catch (err) {
+        // Ignore cross-context errors
+      }
+    }
+    return null;
+  }
+
+  function deriveFenFromDomBoard() {
+    const pieces = [];
+    const pieceEls = document.querySelectorAll('[data-square][data-piece], .piece[data-square], .piece');
+
+    pieceEls.forEach((el) => {
+      const squareRaw = el.getAttribute('data-square') || '';
+      if (!squareRaw) return;
+
+      const square = normalizeSquare(squareRaw);
+      if (!square) return;
+
+      const pieceCode = (el.getAttribute('data-piece') || Array.from(el.classList).find((c) => /^[wb][prnbqk]$/i.test(c)) || '').toLowerCase();
+      if (!pieceCode) return;
+
+      const color = pieceCode.startsWith('w') ? 'w' : 'b';
+      const typeCode = pieceCode.slice(-1);
+      const pieceMap = { p: 'p', r: 'r', n: 'n', b: 'b', q: 'q', k: 'k' };
+      const type = pieceMap[typeCode];
+      if (!type) return;
+
+      pieces.push({ square, piece: color === 'w' ? type.toUpperCase() : type });
+    });
+
+    if (!pieces.length) return null;
+
+    const board = Array.from({ length: 8 }, () => Array(8).fill(null));
+    pieces.forEach(({ square, piece }) => {
+      const file = square.charCodeAt(0) - 'a'.charCodeAt(0);
+      const rank = parseInt(square[1], 10) - 1;
+      if (file >= 0 && file < 8 && rank >= 0 && rank < 8) {
+        board[7 - rank][file] = piece;
+      }
+    });
+
+    const fenRows = board.map((row) => {
+      let empty = 0;
+      let fenRow = '';
+      row.forEach((cell) => {
+        if (cell) {
+          if (empty) {
+            fenRow += empty;
+            empty = 0;
+          }
+          fenRow += cell;
+        } else {
+          empty += 1;
+        }
+      });
+      if (empty) fenRow += empty;
+      return fenRow;
+    });
+
+    const activeColor = detectTurnFromDom();
+    return `${fenRows.join('/')} ${activeColor} - - 0 1`;
+  }
+
+  function normalizeSquare(raw) {
+    const trimmed = raw.trim().toLowerCase();
+    if (/^[a-h][1-8]$/.test(trimmed)) return trimmed;
+    const numericMatch = trimmed.match(/^([1-8])([1-8])$/);
+    if (numericMatch) {
+      const file = String.fromCharCode('a'.charCodeAt(0) + parseInt(numericMatch[1], 10) - 1);
+      return `${file}${numericMatch[2]}`;
+    }
+    return null;
   }
 
   function importChessComPosition() {
